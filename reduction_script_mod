@@ -1,0 +1,22 @@
+python plot_and_reduce.py -c 2021_10_06_test_data/cal_lamp1.FIT -d 2021_10_06_test_data/vega30.FIT
+
+python plot_and_reduce.py -c 2021_10_06_test_data/cal_lamp1.FIT -d 2021_10_06_test_data/jupiter30.FIT -b 210 -t 280
+
+python plot_and_reduce.py -c 2021_10_06_test_data/cal_lamp1.FIT -d 2021_10_06_test_data/Io60.FIT
+
+python plot_and_reduce.py -c 2021_10_06_test_data/cal_lamp1.FIT -d 2021_10_06_test_data/saturn_with_ring_10sec.FIT -b 200 -t 250
+cd 2021_10_06_test_data/
+mv saturn_with_ring_10sec_big.png saturns_ring.png 
+cd ..
+
+python plot_and_reduce.py -c 2021_10_06_test_data/cal_lamp1.FIT -d 2021_10_06_test_data/saturn_with_ring_10sec.FIT -b 125 -t 175
+cd 2021_10_06_test_data/
+mv saturn_with_ring_10sec_big.png saturns_planet.png 
+cd ..
+
+python plot_and_reduce.py -c 2021_10_06_test_data/calibration_3_20sec.FIT -d 2021_10_06_test_data/alcyone_150sec.FIT
+
+python plot_and_reduce.py -c 2021_10_06_test_data/calibration_3_20sec.FIT -d 2021_10_06_test_data/orion_10sec.FIT
+
+python plot_and_reduce.py -c 2021_10_06_test_data/calibration_3_20sec.FIT -d 2021_10_06_test_data/orion_nebulosity_150sec.FIT
+
