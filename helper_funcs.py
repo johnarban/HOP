@@ -2,6 +2,8 @@
 from skimage.segmentation import expand_labels
 from astropy.convolution import kernels
 from astropy.convolution import convolve_fft, convolve
+import astropy.stats as astats
+import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
@@ -35,7 +37,7 @@ def adjust_lightness(color, amount=0.5):
     # https://stackoverflow.com/a/49601444
     try:
         c = mc.cnames[color]
-    except:
+    except Exception:
         c = color
     c = rgb_to_hls(*mc.to_rgb(c))
     return hls_to_rgb(c[0], max(0, min(1, amount * c[1])), c[2])
@@ -147,7 +149,7 @@ def findback1d(image, s=31, fill=0, experimental=False):
     expand = convolve_fft(image, kernels.CustomKernel(arr), boundary='wrap')
     image[np.isnan(image)] = expand[np.isnan(image)]
 
-    #image[oldnan] = fill
+    # image[oldnan] = fill
     s = int(s)
     s = s+1 if s % 2 == 0 else s
     bkg_min = ndimage.minimum_filter(image, size=(s,))
@@ -276,7 +278,7 @@ def wavelength_cal(peaks, hg, ar, order=1, order2=1, return_match=True):
         # Want to just add the first peak #strongest peak
         new_pix = peaks[3]  # peaks[3:][np.argmax(cal_spec[peaks[3:]])]
         new_wave = ar[0]  # ar[6]
-    except:
+    except Exception:
         print('Failed to find peaks')
         return (800, .5)
 
@@ -285,7 +287,7 @@ def wavelength_cal(peaks, hg, ar, order=1, order2=1, return_match=True):
     p = np.polyfit(pix, wave, order)
 
     linelist = np.append(hg, ar)
-    new = λpeaks = np.polyval(p, peaks)
+    new = np.polyval(p, peaks)
     c = linelist[np.argmin(np.abs(new - linelist[:, np.newaxis]), axis=0)]
     p = np.polyfit(peaks, c, order2)
     print('Wavelength solution')
@@ -301,14 +303,15 @@ def clamp(x, xmin, xmax):
     return max(xmin, min(x, xmax))
 
 
-def specextract(data, bottom=None, top=None, slice_fwhm=1.5, plot=False, fig=None, ax=None):
+def specextract(data, bottom=None, top=None, slice_fwhm=1.5,
+                plot=False, fig=None, ax=None):
 
     # Get the vertical slice where the data is
     x = np.mean(data, axis=1)
     y = np.arange(data.shape[0])
 
     # if sl is None:
-    #fitter = fitting.LevMarLSQFitter()
+    # fitter = fitting.LevMarLSQFitter()
     fitthis = False
     if (top is None) or (bottom is None):
         fitthis = True
@@ -318,10 +321,9 @@ def specextract(data, bottom=None, top=None, slice_fwhm=1.5, plot=False, fig=Non
             Chebyshev1D(5)  # models.Const1D(0)
         fit = fitter(model, y, x, maxiter=10000)
         data = data  # - fit.amplitude_1
-        mean = fit.mean_0
         fwhm = fit.stddev_0 * 2.3548
-        new_top, new_bot = int(
-            mean + slice_fwhm*fwhm), int(mean - slice_fwhm*fwhm)
+        new_top, new_bot = (int((fit.mean_0) + slice_fwhm*fwhm),
+                            int((fit.mean_0) - slice_fwhm*fwhm))
         if top is None:
             top = new_top
         if bottom is None:

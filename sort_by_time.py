@@ -8,7 +8,7 @@ def getheader_val(fname,card_name):
     """
     Pure python function to get header values
     from a fits file
-    
+
     """
     with open(fname,'rb') as f:
         line = f.read(80)
@@ -19,7 +19,7 @@ def getheader_val(fname,card_name):
                 if card.strip().decode()==card_name:
                     return value.strip().decode().replace("'","")
             line = f.read(80)
-            
+
 
 if __name__ == "__main__":
     print('\nListing calibration and date files\n')
@@ -27,14 +27,14 @@ if __name__ == "__main__":
     print('> python plot_and_reduce.py -c $cal_file -d $data_file\n')
     data_dir = sys.argv[1]
     data_dir = os.path.realpath(data_dir)
-        
+
     files = glob.glob(os.path.join(data_dir,'*.FIT'))
 
     date = []
     for f in files:
         date_obs = getheader_val(f,'DATE-OBS')
         date.append(dt.datetime.fromisoformat(date_obs,))
-        
+
     argsort = lambda s: sorted(range(len(s)), key=lambda k: s[k])
 
     srt = argsort(date)

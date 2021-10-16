@@ -136,3 +136,7 @@ dmypy.json
 *.swp
 *.fits
 *.pyc
+.vscode
+.vscode/*
+.empty
+.empty/*

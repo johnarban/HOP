@@ -2,7 +2,6 @@ import argparse
 import warnings
 import os
 import numpy as np
-from scipy import ndimage
 import astropy.stats as astats
 from astropy.io import fits
 import matplotlib.pyplot as plt
@@ -104,7 +103,7 @@ def plot_reduce(cal_file, data_file, cal_threshold=0.05, bottom=None, top=None, 
         else:
             spec = np.mean(data[sl, :], axis=0)
 
-        #noise = np.nanstd(data[sl,:],axis=0)/np.sqrt(top-bot)
+        # noise = np.nanstd(data[sl,:],axis=0)/np.sqrt(top-bot)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             noise = astats.sigma_clipped_stats(data, sigma=3,)[-1] / np.sqrt(sl.stop-sl.start)
