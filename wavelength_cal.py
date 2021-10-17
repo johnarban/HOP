@@ -86,8 +86,7 @@ def wavelength_cal(cal_file,recal='n',threshold=0.05,size=5, order=2, rect_order
         cal = np.nanmean(cal,axis=0)
         back = hf.findback1d(cal,s=20)
         cal = cal-back
-        peaks = hf.find_peaks(cal,threshold=threshold,size=size,centroid=True)
-        peaks, cal_peak = peaks.T
+        peaks, cal_peak = hf.find_peaks(cal,threshold=threshold,size=size,centroid=True)
 
         print('== Interactive line selection ==')
         make_selection = True

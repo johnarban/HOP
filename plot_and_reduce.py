@@ -74,8 +74,7 @@ def plot_reduce(cal_file, data_file, cal_threshold=0.05, bottom=None, top=None, 
         # Get wavelength calibration
         cal_spec = np.nanmean(cal, axis=0)
         back = hf.findback1d(cal_spec, s=20)
-        peaks = hf.find_peaks(cal_spec - back, threshold=cal_threshold, size=size,)  # put in wavelength order
-        peaks, peaks_y = peaks.T
+        peaks, peaks_y = hf.find_peaks(cal_spec - back, threshold=cal_threshold, size=size,)  # put in wavelength order
         linelist = np.append(hg, ar)
         new = np.polyval(p, peaks)
         matched = linelist[np.argmin(np.abs(new - linelist[:, np.newaxis]), axis=0)]
@@ -158,7 +157,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--batch", action='store_true', help="Don't open images")
 
-    parser.add_argument("-o", "--order", default=2, type=int, help="Don't open images")
+    parser.add_argument("-o", "--order", default=2, type=int, help="Which order should wavelength calibration use")
 
     parser.add_argument("--zap-cosmic-rays", default=False, help=""""Get rid of cosmic rays.
                                                         This uses simple algorithm that could clip bright lines.

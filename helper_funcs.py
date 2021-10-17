@@ -112,7 +112,7 @@ def find_centroid(cal_spec, peaks, size=5):
 #         x_int = np.linspace(l,r,20)
 #         y_int = np.interp(x_int,x,y)
         centroids.append(centroid(x_cen, y_cen))
-    return np.array(centroids)
+    return np.array(centroids).T
 
 
 def find_peaks(arr, threshold=0.05, size=5, axis=-1, centroid=True):
@@ -360,9 +360,13 @@ def specextract(data, bottom=None, top=None, slice_fwhm=1.5,
     return sl
 
 
-def rectify_ccd(cal, order=2, per_lim=50, plot=False, fig=None, ax=None):
+def rectify_ccd(cal, order=2, per_lim=5, plot=False, fig=None, ax=None):
     """ find the slope of spectral lines
-    in the image plane of the CCD"""
+    in the image plane of the CCD
+
+    returns p_disp, full_frame_solution
+
+    """
     x_line = np.argmax(cal, axis=1)
     y = np.arange(cal.shape[0])
 
@@ -372,11 +376,6 @@ def rectify_ccd(cal, order=2, per_lim=50, plot=False, fig=None, ax=None):
     p_disp = np.polyfit(y[clean], x_line[clean], order)
     # remove the offset (x_line_0) specific to the brightest line
     p_disp[-1] = 0
-
-    # we'll never use this, but nice to have
-    # create array of rectified axes cooordinate
-    y, x_line = np.indices(cal.shape)
-    full_frame_solution = x_line - np.polyval(p_disp, y)
 
     if plot:
         vmin, vmax = np.percentile(cal, [50, 99])
@@ -390,7 +389,13 @@ def rectify_ccd(cal, order=2, per_lim=50, plot=False, fig=None, ax=None):
         ax.imshow(cal, aspect='auto', norm=norm, cmap='magma')
         ax.plot(x_line[clean], y[clean], 'b', lw=3)
         ax.plot(np.polyval(p_disp, y), y, 'w--')
+        ax.set_xlim(0,cal.shape[1])
         ax.set_title('Original')
+
+    # we'll never use this, but nice to have
+    # create array of rectified axes cooordinate
+    y, x_line = np.indices(cal.shape)
+    full_frame_solution = x_line - np.polyval(p_disp, y)
 
     return p_disp, full_frame_solution
 
