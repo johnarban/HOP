@@ -1,11 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
+from astropy.visualization import ImageNormalize, ZScaleInterval
 from matplotlib.backend_bases import FigureCanvasBase
 
 from os.path import exists
 
 import helper_funcs as hf
+
 
 class SnappingCursor:
     """
@@ -65,7 +67,38 @@ class SnappingCursor:
                 self.ax.figure.canvas.draw()
 
 
-
+class HorizontalCursor:
+    """
+    a horizontal range
+    """
+    
+    def __init__(self,ax):
+        self.ax = ax
+        bottom, top = self.ax.get_ylim()
+        self.top = top
+        self.bottom = bottom
+        self.top_line = ax.axhline(color = 'r',ls='r',lw=1.5)
+        self.bot_line = ax.axhline(color = 'r',ls='r',lw=1.5)
+        self.clicknum = 0
+        
+    def on_mouse_click(self,event):
+        if not event.inaxes:
+            pass
+        elif event.inaxes == self.ax:
+            y = int(event.ydata // 1)
+            if self.clicknum % 1:
+                self.bottom = y
+                self.bot_line.set_ydata(y)
+            else:
+                self.top = y
+                self.top_line.set_ydata(y)
+            self.clicknum += 1
+            if self.clicknum > 1:
+                t = max(self.top,self.bottom)
+                b = min(self.top,self.bottom)
+                self.top = t
+                self.bottom = b
+                
 
 def wavelength_cal(cal_file,recal='n',threshold=0.05,size=5, order=2, rect_order=2):
 
@@ -222,7 +255,25 @@ def wavelength_cal(cal_file,recal='n',threshold=0.05,size=5, order=2, rect_order
         return 0, 0, 0, 0
 
 
-
+def image_range_picker(array):
+    
+    fig, ax = plt.subplots(1,1)
+    
+    arr = hf.scale_ptp(array)
+    vmin, vth, vmax = np.percentile(arr,[1,50,99])
+    norm = mc.SymLogNorm(vth,vmin=vmin,vmax=vmax)
+    ax.imshow(arr,norm=norm,cmap='viridis')
+    line_cursor = HorizonatalCursor(ax)
+    
+    cid = fig.canvas.mpl_connect('button_press_event', line_cursor.on_mouse_click)
+    def on_key(event):
+        if event.key == 'enter':
+            fig.canvas.stop_event_loop()
+            plt.close()
+    cid3 = fig.canvas.mpl_connect('key_press_event', on_key)
+    plt.show(block=False)
+    
+    fig.canvas.start_event_loop(timeout=-1)
 
 #### Plot and show Calibration spectrum
 # cal_file = '2021_10_06_test_data/cal_lamp1.FIT'
