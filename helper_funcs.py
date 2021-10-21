@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
 import matplotlib.colors as mc
 from colorsys import rgb_to_hls, hls_to_rgb
-from astropy.modeling.fitting import SimplexLSQFitter
+from astropy.modeling.fitting import SimplexLSQFitter, LevMarLSQFitter
 from astropy.modeling.models import Gaussian1D, Chebyshev1D
 
 import wavelength_cal as wc
@@ -180,6 +180,18 @@ def findback1d(image, s=31, fill=0, experimental=False):
 
     return bkg
 
+def make_norm(arr):
+    vmin, vth, vmax = np.nanpercentile(arr,[5,50,95])
+    if vth < 0:
+        if vmax > 0:
+            vth = vmax/10
+        else:
+            vth = 1
+    # norm = mpl.colors.SymLogNorm(vth,vmin=vmin,vmax=vmax)
+    norm = mc.Normalize(vmin=vmin,vmax=vmax)
+    return norm
+
+
 
 # def find_peaks(arr,threshold = 0.1 , size=20,axis=-1):
 #     arr = ju.scale_ptp(arr)
@@ -245,7 +257,7 @@ def shift_row_interp(A, wave_poly, plot=False, fig=None, axs=None):
         x_rect = x_image - np.polyval(wave_poly, i)
         # We want to interpolate
         # ,left=np.median(A),right=np.median(A))
-        y_rect = np.interp(x_image, x_rect, A[i, :])
+        y_rect = np.interp(x_image, x_rect, A[i, :],left=np.nan,right=np.nan)
         B[i, :] = y_rect
 
     if plot:
@@ -253,7 +265,8 @@ def shift_row_interp(A, wave_poly, plot=False, fig=None, axs=None):
             if fig is None:
                 fig, axs = plt.subplots(1, 2, figsize=(12, 4))
         vmin, vmax = np.percentile(A, [50, 99])
-        norm = mc.SymLogNorm(100, vmin=vmin, vmax=vmax)
+        # norm = mc.SymLogNorm(100, vmin=vmin, vmax=vmax)
+        norm = make_norm(A)
 
         ax = axs[0]
         if ax is not None:
@@ -268,31 +281,19 @@ def shift_row_interp(A, wave_poly, plot=False, fig=None, axs=None):
     return B
 
 
-def wavelength_cal(peaks, hg, ar, order=1, order2=1, return_match=True):
-    try:
-        # Mercury is easy to calibrate
-        pix = peaks[:3]  # 0,1,2
-        wave = hg[-3:]
-        # wavelength solution linear
-        # Argon
-        # Want to just add the first peak #strongest peak
-        new_pix = peaks[3]  # peaks[3:][np.argmax(cal_spec[peaks[3:]])]
-        new_wave = ar[0]  # ar[6]
-    except Exception:
-        print('Failed to find peaks')
-        return (800, .5)
+def wavelength_cal(pix, wave, order=1, order2=1, return_match=False):
 
-    pix = np.append(pix, new_pix)
-    wave = np.append(wave, new_wave)
     p = np.polyfit(pix, wave, order)
 
-    linelist = np.append(hg, ar)
-    new = np.polyval(p, peaks)
-    c = linelist[np.argmin(np.abs(new - linelist[:, np.newaxis]), axis=0)]
-    p = np.polyfit(peaks, c, order2)
     print('Wavelength solution')
-    print(f'{p[-2]:0.5g} x + {p[-1]:0.5g}')
+    if order == 1:
+        print(f'{p[0]:0.5g} x + {p[1]:0.5g}')
+    elif order == 2:
+        print(f'{p[0]:0.5g} x^2 + {p[1]:0.5g} x + {p[2]:0.5g}')
+    else:
+        print('3rd order fit coeeffs',p)
     if return_match:
+        c = wave
         return p, c
     else:
         return p
@@ -303,11 +304,11 @@ def clamp(x, xmin, xmax):
     return max(xmin, min(x, xmax))
 
 
-def specextract(data, bottom=None, top=None, slice_fwhm=1.5,
-                plot=False, fig=None, ax=None):
+def specextract(data, bottom=None, top=None, slice_fwhm=1,
+                plot=False, fig=None, ax=None, aperture=False):
 
     # Get the vertical slice where the data is
-    x = np.mean(data, axis=1)
+    x = np.nanmean(data, axis=1)
     y = np.arange(data.shape[0])
 
     # if sl is None:
@@ -316,14 +317,22 @@ def specextract(data, bottom=None, top=None, slice_fwhm=1.5,
     if (top is None) or (bottom is None):
         fitthis = True
     if fitthis:
-        fitter = SimplexLSQFitter()
-        model = Gaussian1D(np.max(x), np.argmax(x), 1) + \
-            Chebyshev1D(5)  # models.Const1D(0)
+        print('Fitting')
+        fitter = LevMarLSQFitter()
+        line = Gaussian1D(amplitude=np.max(x), mean=np.argmax(x), stddev=5.)
+        bloom = Gaussian1D(amplitude=0, mean=np.argmax(x), stddev=5.,bounds = {})
+        def tie_mean(model):
+            return model.mean_1
+
+        bloom.mean.tied = tie_mean
+
+
+        model = line + Chebyshev1D(5)  # models.Const1D(0)
         fit = fitter(model, y, x, maxiter=10000)
         data = data  # - fit.amplitude_1
-        fwhm = fit.stddev_0 * 2.3548
-        new_top, new_bot = (int((fit.mean_0) + slice_fwhm*fwhm),
-                            int((fit.mean_0) - slice_fwhm*fwhm))
+        hwhm = fit.stddev_0 * 2.3548 / 2 # HWHM
+        new_top, new_bot = (int((fit.mean_0) + slice_fwhm*hwhm),
+                            int((fit.mean_0) - slice_fwhm*hwhm))
         if top is None:
             top = new_top
         if bottom is None:
