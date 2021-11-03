@@ -12,9 +12,10 @@ import helper_funcs as hf
 import wavelength_cal as wc
 
 
+
 def reduce(cal_file, data_file, cal_threshold=0.05, bottom=None, top=None, rectify=True,
            plot=False, clip_cal=False, cosmic_rays=False, save=True, order=2, size=5, slice_fwhm=1.5,
-           recal='n'):
+           recal='n',sbig=False,diffuse=False):
     """
     reduce(cal_file, data_file, bottom = #, top = #, save = True, order = 2)
 
@@ -42,31 +43,40 @@ def reduce(cal_file, data_file, cal_threshold=0.05, bottom=None, top=None, recti
     # remove offset/bias
 
     # 2) Extract selection for spectral regions
-    sl = hf.specextract(data, bottom=bottom, top=top, slice_fwhm=slice_fwhm)
+    if diffuse:
+        sl = slice(0,None)  # full range
+    else:
+        sl = hf.specextract(data, bottom=bottom, top=top, slice_fwhm=slice_fwhm, sbig=sbig)
 
-    # 3) Get wavelength calibration
-    # p, wavesol, cal_spec = get_wavelength_cal(cal[sl,:],order=order)
 
-    # 4) Some targets are cosmic rays (this is very simplistic)
+    # 3) Some targets are cosmic rays (this is very simplistic)
     if cosmic_rays:
-        cr = hf.get_cosmic_rays(data)
+        cr = hf.get_cosmic_rays(data) | np.isnan(data)
         spec = np.ma.mean(np.ma.masked_array(data, cr)[sl, :], axis=0)
     else:
-        spec = np.mean(data[sl, :], axis=0)
+        spec = np.nanmean(data[sl, :], axis=0)
 
-    # 5) Measure the noise
+    # 4) Measure the noise
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        noise = astats.sigma_clipped_stats(data, sigma=3,)[-1] / np.sqrt(sl.stop-sl.start)
+        N = np.sum(np.isfinite(data[sl,:]),axis=0)
+        noise = astats.sigma_clipped_stats(data, sigma=3,)[-1] / np.sqrt(N)
         noise = np.sqrt(spec + noise**2)
 
-    out = list(zip(wavesol, spec, noise))
+    cal_spec = np.mean(cal[sl, :], axis=0)
+    # 6) Save the output
+    out = np.array(list(zip(wavesol, spec, noise, cal_spec)))
+    #out = list(zip(wavesol, spec, noise))
+    # if save:
+    #     fname = f"{data_file.replace('.FIT','.tsv')}"
+    #     with open(fname, 'w') as f:
+    #         f.write('wavelength , spectrum , error\n')
+    #         for i in out:
+    #             f.write('{:<9.3f}\t{:>10.3f}\t{:>10.3f}\n'.format(*i))
     if save:
-        fname = f"{data_file.replace('.FIT','.tsv')}"
-        with open(fname, 'w') as f:
-            f.write('wavelength\tspectrum\terror\n')
-            for i in out:
-                f.write('{:<9.3f}\t{:>10.3f}\t{:>10.3f}\n'.format(*i))
+        fname = f"{data_file.replace('.FIT','.csv')}"
+        np.savetxt(fname, out, fmt=('%-9.3f , %-10.3f , %-10.3f , %-10.3f'), header='wave spec err cal')
+
 
     return wavesol, spec, noise
 
@@ -79,6 +89,10 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--cal", help="""The calibration file""")
 
     parser.add_argument("-d", "--data", help="The spectrum we want reduced")
+
+    parser.add_argument("-s", "--no-sbig", action='store_false', help="Don't reduce data using 20 pixel cut (like required for SBIG Spectra software")
+
+    parser.add_argument("--diffuse", action='store_true', help="Use entire slit (for diffuse object spectra)")
 
     parser.add_argument("-b", "--bottom", default=None, type=int, help="lower index for spectrum boundary")
 
@@ -93,8 +107,6 @@ if __name__ == "__main__":
                         help="Force recalibration. Otherwise it will silently use a previous calibration if one exists")
 
     parser.add_argument("--width", default=1.5, type=float, help="Number of FWHMs to use for extracting spectrum")
-
-    # parser.add_argument("-s","--dont-save",action='store_true',help="Don't save the spectra?")
 
     parser.add_argument("--batch", action='store_true', help="Don't open images")
 
@@ -126,6 +138,16 @@ if __name__ == "__main__":
 
     slice_fwhm = args.width
 
+    sbig = ~args.no_sbig
+
+    if not ((bottom is None) or (top is None)):
+        sbig = False
+
+    diffuse = args.diffuse
+    if diffuse:
+        sbig = False
+
+
     hg = np.loadtxt('hgar_blue.txt') / 10
     ar = np.loadtxt('argon_red.txt') / 10
 
@@ -135,7 +157,7 @@ if __name__ == "__main__":
         recal = 'n'
 
     out = reduce(cal_file, data_file, cal_threshold=threshold, bottom=bottom, top=top, order=order,
-                 rectify=rectify, cosmic_rays=zap_cosmic_rays, save=save, slice_fwhm=slice_fwhm, recal=recal)
+                 rectify=rectify, cosmic_rays=zap_cosmic_rays, save=save, slice_fwhm=slice_fwhm, recal=recal,sbig=sbig,diffuse=diffuse)
 
     if plot:
         w, spec, noise = out
