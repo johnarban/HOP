@@ -49,7 +49,9 @@ if __name__ == "__main__":
             npix = getheader_val(f,'NAXIS2').strip().lower()
             if obj == 'cal':
                 cal = f
+                print(f'cal_file={cal}')
             elif (npix=='510'):
-                print(f'cal_file={cal};data_file={f}')
-                line = f'python plot_and_reduce.py -c {cal} -d {f} --batch\n\n'
-                fred.write(line)
+                print(f'data_file={f}')
+                #print(f'cal_file={cal};data_file={f}')
+                #line = f'python plot_and_reduce.py -c {cal} -d {f} --batch\n\n'
+                #fred.write(line)

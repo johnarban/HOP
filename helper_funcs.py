@@ -304,69 +304,70 @@ def clamp(x, xmin, xmax):
     return max(xmin, min(x, xmax))
 
 
-def specextract(data, bottom=None, top=None, slice_fwhm=1,
-                plot=False, fig=None, ax=None, aperture=False):
+from spec_extract import specextract
+# def specextract(data, bottom=None, top=None, slice_fwhm=1,
+#                 plot=False, fig=None, ax=None, aperture=False):
 
-    # Get the vertical slice where the data is
-    x = np.nanmean(data, axis=1)
-    y = np.arange(data.shape[0])
+#     # Get the vertical slice where the data is
+#     x = np.nanmean(data, axis=1)
+#     y = np.arange(data.shape[0])
 
-    # if sl is None:
-    # fitter = fitting.LevMarLSQFitter()
-    fitthis = False
-    if (top is None) or (bottom is None):
-        fitthis = True
-    if fitthis:
-        print('Fitting')
-        fitter = LevMarLSQFitter()
-        line = Gaussian1D(amplitude=np.max(x), mean=np.argmax(x), stddev=5.)
-        bloom = Gaussian1D(amplitude=0, mean=np.argmax(x), stddev=5.,bounds = {})
-        def tie_mean(model):
-            return model.mean_1
+#     # if sl is None:
+#     # fitter = fitting.LevMarLSQFitter()
+#     fitthis = False
+#     if (top is None) or (bottom is None):
+#         fitthis = True
+#     if fitthis:
+#         print('Fitting')
+#         fitter = LevMarLSQFitter()
+#         line = Gaussian1D(amplitude=np.max(x), mean=np.argmax(x), stddev=5.)
+#         bloom = Gaussian1D(amplitude=0, mean=np.argmax(x), stddev=5.,bounds = {})
+#         def tie_mean(model):
+#             return model.mean_1
 
-        bloom.mean.tied = tie_mean
+#         bloom.mean.tied = tie_mean
 
 
-        model = line + Chebyshev1D(5)  # models.Const1D(0)
-        fit = fitter(model, y, x, maxiter=10000)
-        data = data  # - fit.amplitude_1
-        hwhm = fit.stddev_0 * 2.3548 / 2 # HWHM
-        new_top, new_bot = (int((fit.mean_0) + slice_fwhm*hwhm),
-                            int((fit.mean_0) - slice_fwhm*hwhm))
-        if top is None:
-            top = new_top
-        if bottom is None:
-            bottom = new_bot
+#         model = line + Chebyshev1D(5)  # models.Const1D(0)
+#         fit = fitter(model, y, x, maxiter=10000)
+#         data = data  # - fit.amplitude_1
+#         hwhm = fit.stddev_0 * 2.3548 / 2 # HWHM
+#         new_top, new_bot = (int((fit.mean_0) + slice_fwhm*hwhm),
+#                             int((fit.mean_0) - slice_fwhm*hwhm))
+#         if top is None:
+#             top = new_top
+#         if bottom is None:
+#             bottom = new_bot
 
-    if bottom < top:
-        if top < y.max():
-            if bottom < 0:
-                bottom = 0
-        else:
-            top = 0
-    else:
-        if top > 0:
-            bottom = int(top//2)
-        else:
-            bottom, top = 0, y.max()
-    sl = slice(bottom, top)
-    print('Boundaries for spectra', sl.start, sl.stop)
+#     if bottom < top:
+#         if top < y.max():
+#             if bottom < 0:
+#                 bottom = 0
+#         else:
+#             top = 0
+#     else:
+#         if top > 0:
+#             bottom = int(top//2)
+#         else:
+#             bottom, top = 0, y.max()
+#     sl = slice(bottom, top)
+#     print('Boundaries for spectra', sl.start, sl.stop)
 
-    if plot:
-        if ax is None:
-            if fig is None:
-                fig, ax = plt.subplots(1, 1)
-            else:
-                ax = fig.add_subplot()
-        ax.plot(y, x, label='data')
-        if fitthis:
-            ax.plot(y, fit(y), 'r', label='fit')
-        ax.set_xlabel('cross-dispersion direction (pixels)')
-        ax.set_ylabel('data units')
-        ax.axvspan(sl.start, sl.stop, color='0.5')
-        ax.legend(loc='best')
+#     if plot:
+#         if ax is None:
+#             if fig is None:
+#                 fig, ax = plt.subplots(1, 1)
+#             else:
+#                 ax = fig.add_subplot()
+#         ax.plot(y, x, label='data')
+#         if fitthis:
+#             ax.plot(y, fit(y), 'r', label='fit')
+#         ax.set_xlabel('cross-dispersion direction (pixels)')
+#         ax.set_ylabel('data units')
+#         ax.axvspan(sl.start, sl.stop, color='0.5')
+#         ax.legend(loc='best')
 
-    return sl
+#     return sl
 
 
 def rectify_ccd(cal, order=2, per_lim=5, plot=False, fig=None, ax=None):
