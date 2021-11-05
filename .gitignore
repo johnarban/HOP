@@ -140,3 +140,12 @@ dmypy.json
 .vscode/*
 .empty
 .empty/*
+*.FIT
+*.tsv
+*.SBIG
+*.Stxt
+*.pdf
+*.csv
+*.jpg
+*.st7
+*.zip

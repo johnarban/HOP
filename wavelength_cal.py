@@ -295,8 +295,9 @@ def wavelength_cal(cal_file, recal='n', threshold=0.05, size=5, order=2, rect_or
         header = " ".join([f"{w} " for w in wavesol])
         header = header + "\n" + " ".join([f"{w} " for w in rect_sol])
         header = header + "\nwave cal"
-        breakpoint()
+
         np.savetxt(fname, out, fmt=('%-9.3f\t%-10.3f'), header=header)
+
         return wavesol, wave, cal, rect_sol
     else:
         return 0, 0, 0, 0

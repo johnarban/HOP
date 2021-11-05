@@ -45,19 +45,19 @@ def plot_reduce(cal_file, data_file, cal_threshold=0.05, bottom=None, top=None, 
             axs['F'] = None
             axs['I'] = None
 
-        # rect_sol, full_frame_solution = rectify_ccd(cal,plot=plot,ax=axs['A']);
+        rect_sol, full_frame_solution = hf.rectify_ccd(cal,plot=plot,ax=axs['A']);
         print('Rectify')
         if rectify:
-            cal = hf.shift_row_interp(cal, rect_sol, plot=plot, axs=(axs['A'], axs['B']))
+            cal = hf.shift_row_interp(cal, rect_sol, plot=plot, axs=(None, axs['B']))
             data = hf.shift_row_interp(data, rect_sol, plot=plot, axs=(axs['C'], axs['D']))
         else:
-            hf.shift_row_interp(cal, rect_sol, plot=plot, axs=(axs['A'], None))
+            hf.shift_row_interp(cal, rect_sol, plot=plot, axs=(None, None))
             hf.shift_row_interp(data, rect_sol, plot=plot, axs=(axs['C'], None))
 
         print('Extract spectra')
         if diffuse:
             sl = slice(1,data.shape[0]-1)  # full range
-            plt.delaxes(axes['I'])
+            plt.delaxes(axs['I'])
         else:
             sl = hf.specextract(data, bottom=bottom, top=top, plot=plot, ax=axs['I'], slice_fwhm=slice_fwhm,sbig=sbig)
 
@@ -130,12 +130,12 @@ def plot_reduce(cal_file, data_file, cal_threshold=0.05, bottom=None, top=None, 
         out = np.array(list(zip(wavesol, spec, noise, cal_spec-back)))
 
         if save:
-            fname = f"{data_file.replace('.FIT','.csv')}"
+            fname = f"{data_file.replace('.FIT','.tsv')}"
 #             with open(fname,'w') as f:
 #                 f.write('wavelength\tspectrum\terror\tcal\n')
 #                 for i in out:
 #                     f.write('{:<9.3f}\t{:>10.3f}\t{:>10.3f}\t{:>10.3f}\n'.format(*i))
-            np.savetxt(fname, out, fmt=('%-9.3f , %-10.3f , %-10.3f , %-10.3f'), header='wave spec err cal')
+            np.savetxt(fname, out, fmt=('%-9.3f \t %-10.3f \t %-10.3f \t %-10.3f'), header='wave spec err cal')
 
         return (wavesol, spec, noise), fig
 
@@ -149,7 +149,7 @@ if __name__ == "__main__":
 
     parser.add_argument("-d", "--data", help="The spectrum we want reduced")
 
-    parser.add_argument("-s", "--no-sbig", action='store_false', help="Don't reduce data using 20 pixel cut (like required for SBIG Spectra software")
+    parser.add_argument("-s", "--no-sbig", action='store_true', help="Don't reduce data using 20 pixel cut (like required for SBIG Spectra software")
 
     parser.add_argument("--diffuse", action='store_true', help="Use entire slit (for diffuse object spectra)")
 
@@ -172,7 +172,7 @@ if __name__ == "__main__":
 
     parser.add_argument("-o", "--order", default=2, type=int, help="Which order should wavelength calibration use")
 
-    parser.add_argument("--zap-cosmic-rays", default=False, help=""""Get rid of cosmic rays.
+    parser.add_argument("--zap-cosmic-rays", action='store_true', help=""""Get rid of cosmic rays.
                                                         This uses simple algorithm that could clip bright lines.
                                                         Best used only for long integrations of diffuse nebular emission""")
 
@@ -198,7 +198,11 @@ if __name__ == "__main__":
     hg = np.loadtxt('hgar_blue.txt') / 10
     ar = np.loadtxt('argon_red.txt') / 10
 
-    sbig = ~args.no_sbig
+    no_sbig = args.no_sbig
+    sbig = not no_sbig
+
+    if args.no_sbig:
+        print('Not using SBIG default 20 pixel cut')
 
     if not ((bottom is None) or (top is None)):
         sbig = False

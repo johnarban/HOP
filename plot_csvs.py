@@ -8,7 +8,7 @@ from os.path import basename
 # Plot data from first two columns of csv files in directory
 def plot_csvs(directory, file_names, x_label='wavelength', y_label='counts', title=None):
     for file_name in file_names:
-        data = np.loadtxt(directory + file_name, delimiter=',')
+        data = np.loadtxt(directory + file_name)
         plt.figure()
         plt.plot(data[:, 0], data[:, 1])
         plt.xlabel(x_label)
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     if args.directory[-1] != '/':
         args.directory += '/'
     if args.file_names == "all":
-        file_names = [basename(i) for i in glob.glob(args.directory + '*.csv')]
+        file_names = [basename(i) for i in glob.glob(args.directory + '*.tsv')]
     else:
         file_names = args.file_names.split(',')
 
